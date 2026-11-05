@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coffeebreak Fashion 3D</title>
+<style>
+:root{--pink:#ff4fa3;--pink2:#ff8cc6;--soft:#ffe3f1;--deep:#b0105f;--ink:#3a1028}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(#ffe9f4,#ffd6ea);color:var(--ink)}
+header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:linear-gradient(90deg,var(--pink),var(--pink2));color:#fff}
+header img{height:52px;width:auto;border-radius:10px;background:#fff2}
+header h1{margin:0;font-size:1.4rem}
+header .sub{font-size:.85rem;opacity:.95}
+nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;background:#fff6fb;border-bottom:2px solid var(--pink2);position:sticky;top:0;z-index:5}
+nav button{flex:1 1 auto;min-width:90px}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:12px 14px;background:#fff;color:var(--deep);box-shadow:0 2px 0 #f3a6cb;cursor:pointer}
+button:hover{background:var(--soft)}
+button.on,button.main{background:var(--pink);color:#fff;box-shadow:0 3px 0 var(--deep)}
+button.big{font-size:1.25rem;padding:18px 22px;border-radius:18px}
+button.huge{font-size:1.6rem;padding:22px 30px;border-radius:22px;width:100%;max-width:520px}
+main{max-width:1100px;margin:0 auto;padding:12px}
+section{display:none}section.show{display:block}
+.card{background:#fff;border-radius:18px;padding:14px;box-shadow:0 4px 14px #ff4fa322;margin-bottom:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}header h1{font-size:1.15rem}}
+canvas{max-width:100%;touch-action:none;border-radius:14px;display:block}
+#draw{background:#fff;border:3px solid var(--pink2);width:100%;height:auto;aspect-ratio:1/1}
+#view{background:radial-gradient(#fff,#ffe1f0);border:3px solid var(--pink2);width:100%;height:auto;aspect-ratio:4/3;cursor:grab}
+label{font-weight:600}
+input[type=range]{accent-color:var(--pink);width:160px}
+select,input[type=text],input[type=number]{font:inherit;padding:10px;border-radius:12px;border:2px solid var(--pink2);background:#fff}
+.note{font-size:.9rem;background:var(--soft);border-radius:12px;padding:10px}
+.choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.choice button{text-align:left;padding:18px;font-size:1.1rem}
+.choice button small{display:block;font-weight:500;color:#7a3a5c;margin-top:4px}
+.choice button.on small{color:#fff}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{padding:7px;border-bottom:1px solid #ffd0e6;text-align:left;vertical-align:top}
+th{background:var(--soft)}
+td a{color:var(--deep);word-break:break-word}
+.q{display:flex;gap:10px;align-items:center;border:2px solid #ffd0e6;border-radius:14px;padding:8px;margin:6px 0;background:#fff}
+.q img{width:90px;height:60px;object-fit:contain;background:#fff6fb;border-radius:8px}
+.q .grow{flex:1}
+.tag{display:inline-block;background:var(--pink);color:#fff;border-radius:999px;padding:2px 10px;font-size:.8rem}
+.tag.done{background:#2e9e5b}
+#preview{max-width:100%;border:2px dashed var(--pink2);border-radius:12px;background:#fff}
+footer{max-width:1100px;margin:14px auto;padding:14px;font-size:.85rem;background:#fff;border-radius:18px;color:#5a2a44}
+footer a{color:var(--deep)}
+.modal{position:fixed;inset:0;background:#3a102880;display:none;align-items:center;justify-content:center;z-index:20;padding:10px}
+.modal.show{display:flex}
+.modal .box{background:#fff;border-radius:22px;max-width:760px;width:100%;max-height:92vh;overflow:auto;padding:18px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--deep);color:#fff;padding:12px 18px;border-radius:14px;display:none;z-index:30;font-weight:700}
+#printArea{display:none}
+@media print{
+ @page{size:A4;margin:8mm}
+ body{background:#fff}
+ body>*:not(#printArea){display:none!important}
+ #printArea{display:block!important}
+ #printArea img{display:block;page-break-after:always}
+}
+</style>
+</head>
+<body>
+<header><img src="assets/logo.png" alt="Coffeebreak logo"><div><h1>Coffeebreak Fashion 3D</h1><div class="sub">Draw it, see it in 3D, print it. Every design carries the Karen Elizabeth label.</div></div></header>
+<nav id="tabs">
+ <button data-t="design" class="on">✏️ Design</button>
+ <button data-t="view3d">🧊 3D</button>
+ <button data-t="print">🖨️ Print</button>
+ <button data-t="queue">📋 Queue <span id="qcount"></span></button>
+ <button data-t="suppliers">🛍️ Suppliers</button>
+ <button data-t="help">❓ Help</button>
+</nav>
+<main>
+<section id="design" class="show">
+ <div class="grid2">
+  <div class="card">
+   <canvas id="draw" width="720" height="720" aria-label="Drawing board"></canvas>
+   <div class="row" style="margin-top:8px">
+    <button id="toolFill" class="on" title="Draw a closed shape that becomes solid">🩷 Shape</button>
+    <button id="toolLine" title="Draw lines like a 3D pen">〰️ Line</button>
+    <button id="undo">↩️ Undo</button>
+    <button id="clear">🗑️ Clear</button>
+   </div>
+   <p class="note">Draw with your finger, pen or mouse. The board is 120 × 120 mm, each grid square is 10 mm. Shapes close themselves. The Karen Elizabeth tag is added under every design.</p>
+  </div>
+  <div>
+   <div class="card">
+    <h3 style="margin-top:0">Start from a design</h3>
+    <div class="row" id="templates">
+     <button data-tpl="bag">👜 Bag</button><button data-tpl="shoe">👠 Shoe</button><button data-tpl="earring">💎 Earring</button>
+     <button data-tpl="charm">💖 Charm</button><button data-tpl="pattern">✨ Pattern</button><button data-tpl="bow">🎀 Bow</button>
+    </div>
+   </div>
+   <div class="card">
+    <div class="row"><label for="dname">Design name</label><input type="text" id="dname" value="My Coffeebreak Design" maxlength="40" style="flex:1"></div>
+    <p class="row"><label for="thick">Thickness</label><input type="range" id="thick" min="1" max="10" step="0.5" value="3"><span id="thickV">3 mm</span></p>
+    <p class="row"><label for="lineW">Line width</label><input type="range" id="lineW" min="1" max="6" step="0.5" value="2"><span id="lineWV">2 mm</span></p>
+    <p class="row"><label for="scale">Size</label><input type="range" id="scale" min="25" max="200" step="5" value="100"><span id="scaleV">100%</span></p>
+    <p class="row"><label><input type="checkbox" id="tagOn" checked disabled> Karen Elizabeth label (always on)</label></p>
+    <div class="row"><button class="main big" id="go3d">🧊 See it in 3D</button><button class="main big" id="goPrint">🖨️ Print</button></div>
+    <p class="row"><button id="saveD">💾 Save design</button><button id="loadD">📂 Load saved</button></p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section id="view3d">
+ <div class="card">
+  <canvas id="view" width="800" height="600" aria-label="3D preview"></canvas>
+  <div class="row" style="margin-top:8px"><button id="spin" class="on">🔄 Spin</button><button id="resetView">🎯 Reset view</button><span id="dims" class="note"></span></div>
+  <p class="note">Drag to turn the model. This is the same model that goes into the STL file.</p>
+  <div class="row"><button class="main big" id="go3dPrint">🖨️ Print this</button><button class="big" id="dlStl">⬇️ Download STL</button></div>
+ </div>
+</section>
+
+<section id="print">
+ <div class="card" style="text-align:center">
+  <button class="main huge" id="bigPrint">🖨️ Print</button>
+  <p>Pick a printer, check the preview, press Print. Done.</p>
+ </div>
+ <div class="card">
+  <h3 style="margin-top:0">1. Which printer?</h3>
+  <div class="choice" id="ptype">
+   <button data-p="3d" class="on">🧊 3D printer<small>Makes the solid piece. Saves an STL file plus easy settings.</small></button>
+   <button data-p="label">🏷️ Label printer<small>Karen Elizabeth labels for 12 mm or 24 mm tape, or a 62 mm roll.</small></button>
+   <button data-p="paper">📄 Paper printer<small>A 1:1 stencil to trace with a 3D pen, plus the label.</small></button>
+  </div>
+  <div id="opt3d" class="card" style="background:#fff6fb;margin-top:10px">
+   <h3 style="margin-top:0">2. Your 3D printer brand</h3>
+   <div class="choice" id="brand">
+    <button data-b="bambu" class="on">Bambu Lab<small>Bambu Studio</small></button>
+    <button data-b="creality">Creality<small>Creality Print</small></button>
+    <button data-b="prusa">Prusa<small>PrusaSlicer</small></button>
+    <button data-b="other">Other<small>Any slicer (Cura etc.)</small></button>
+   </div>
+   <p class="row"><label for="mat">Material</label><select id="mat"><option value="PLA" selected>PLA (easiest)</option><option value="PETG">PETG (tougher)</option><option value="TPU">TPU (bendy)</option></select></p>
+  </div>
+  <div id="optLabel" class="card" style="background:#fff6fb;margin-top:10px;display:none">
+   <h3 style="margin-top:0">2. Label size</h3>
+   <div class="choice" id="lsize">
+    <button data-l="12" class="on">12 mm tape<small>Brother P-touch / DYMO LetraTag, incl. iron-on fabric tape. 60 × 12 mm.</small></button>
+    <button data-l="24">24 mm tape<small>Wide P-touch tape. 70 × 24 mm.</small></button>
+    <button data-l="62">62 mm roll<small>Brother QL roll, swing tags. 62 × 29 mm.</small></button>
+   </div>
+   <p class="row"><label for="lcopies">Copies</label><input type="number" id="lcopies" min="1" max="50" value="4" style="width:90px"></p>
+  </div>
+  <div id="optPaper" class="card" style="background:#fff6fb;margin-top:10px;display:none">
+   <h3 style="margin-top:0">2. Paper</h3>
+   <p>A4, printed at actual size (100%). Turn off "fit to page" in the print box. Check the 50 mm ruler with a real ruler.</p>
+  </div>
+  <h3>3. Preview</h3>
+  <img id="preview" alt="Print preview">
+  <p class="row"><button class="main big" id="doPrint">🖨️ Print now</button><button class="big" id="addQ">➕ Add to queue</button></p>
+  <p class="note" id="honest">How printing works: this app gets the file ready and opens it the easy way. For a 3D printer it saves an STL file and a settings card, then you open the STL in your printer's own app (Bambu Studio, Creality Print or PrusaSlicer) and press print there. For a label printer it saves a PNG and PDF at the exact tape size to open in Brother P-touch Editor, iPrint&amp;Label or DYMO software. For paper it opens your browser's print box. It does not control USB printers directly.</p>
+ </div>
+</section>
+
+<section id="queue">
+ <div class="card">
+  <h3 style="margin-top:0">Print queue</h3>
+  <div id="qlist"></div>
+  <p class="row"><button class="main big" id="runAll">▶️ Print all</button><button id="clearDone">🧹 Clear finished</button></p>
+ </div>
+</section>
+
+<section id="suppliers">
+ <div class="card">
+  <h3 style="margin-top:0">Where to buy (Australia)</h3>
+  <p class="note">Prices in AUD, seen on each page on 3 Nov 2026. Prices change, so check the page first. Coffeebreak is not paid by these shops. Brand names belong to their owners.</p>
+  <div id="suppTables"></div>
+ </div>
+</section>
+
+<section id="help">
+ <div class="card">
+  <h3 style="margin-top:0">Easy steps</h3>
+  <ol>
+   <li>Pick a design (bag, shoe, earring, charm, pattern, bow) or draw your own.</li>
+   <li>Press <b>See it in 3D</b> to check it.</li>
+   <li>Press <b>Print</b> and choose 3D printer, label printer or paper.</li>
+   <li>3D printer: open the saved STL in your printer app and print. Lay it flat, label side up.</li>
+   <li>3D pen: print the paper stencil, lay baking paper on top and trace.</li>
+   <li>Labels: open the label file in your label printer app. Iron-on fabric tape can be ironed or sewn into clothes.</li>
+  </ol>
+  <p class="note">3D pens and printer nozzles get very hot. Adults should supervise children. PCL low-temperature pens are best for kids.</p>
+ </div>
+</section>
+</main>
+
+<footer>
+ <p><b>Disclaimer.</b> Karen Elizabeth O'Brien (Coffeebreak) keeps all rights to her products, designs, apps, name and logo, including the Karen Elizabeth label. Buyers may resell physical items they made or bought but may not copy, resell or share this app or its designs, or make their own versions. Third-party trademarks and brand names (such as Bambu Lab, Creality, Prusa, Brother, P-touch, DYMO and the shops listed) belong to their owners and are used only to describe compatible products. Supplier prices are a guide only.</p>
+ <p>Made by Coffeebreak · <a href="https://coffeebreaks.itch.io" target="_blank" rel="noopener">More Coffeebreak apps</a></p>
+ <p><a href="https://www.tesla.com" target="_blank" rel="noopener">Tesla</a> · <a href="https://www.starlink.com" target="_blank" rel="noopener">Starlink</a></p>
+</footer>
+
+<div class="modal" id="doneModal"><div class="box"><h2 id="mTitle">Ready</h2><div id="mBody"></div><p><button class="main big" id="mClose">OK</button></p></div></div>
+<div id="toast"></div>
+<div id="printArea"></div>
+
+<script>
+"use strict";
+const SUPPLIERS=[
+["3D printing pens",[
+["Office Goods","3D printing pen with LCD + 3 filaments (pink option)","$23.55","https://officegoods.com.au/products/3d-printing-pen-with-lcd-screen-usb-and-3-filaments"],
+["myFirst Australia","myFirst 3dPen Make","$39.90 sale (RRP $59.90)","https://au.myfirst.tech/products/myfirst-3dpen-make"],
+["Jaycar (stockist Electrical Discounters)","Duinotech Low Temp PCL 3D Pen Kit TL4580 (kid-friendly)","$64.95","https://electricaldiscounters.com.au/jaycar-duinotech-low-temperature-pcl-3d-pen-kit/"],
+["Jaycar (stockist Electrical Discounters)","Protech High Temp PLA 3D Pen Kit TL4582","$99.95","https://electricaldiscounters.com.au/computers-tech/3d-printers-supplies/printing-accessories/"]]],
+["Filament (PLA / PCL)",[
+["Nowra Electronics","TL4255 10-piece PLA pen filament, 3 m each, incl. pink","$18.95","https://nowraelectronics.com.au/product_details/TL4255"],
+["Officeworks","Qudo PLA 3D Filament Pastel Blue","$19.00","https://www.officeworks.com.au/shop/officeworks/p/qudo-pla-3d-filament-pastel-blue-qudoplapbe"],
+["Officeworks","3D printers and filament range","varies","https://www.officeworks.com.au/shop/officeworks/c/technology/printers/3d-printers"],
+["Amazon AU","20-colour 1.75 mm PLA pen refill, 200 m","about $19.99","https://www.amazon.com.au/Colors-Filament-Bundles-Template-Doodler/dp/B0CX8FN8TH"],
+["Amazon AU","15 rolls low-temp PCL pen filament","check page","https://www.amazon.com.au/Homoyoyo-Printing-Filament-Thermoplastic-Education/dp/B0F6TNDF2K"],
+["Bunnings Marketplace","Creality Hyper PLA 1 kg","$39","https://www.bunnings.com.au/products/indoor-living/home-office/computers-tablets/printing/3d-printers"]]],
+["3D printers",[
+["JB Hi-Fi","Bambu Lab A1 Mini (open frame)","$299","https://www.jbhifi.com.au/products/bambu-lab-a1-mini-3d-printer-open-frame"],
+["Creality AU store","Creality Ender-3 V3 SE","$249 (was $329)","https://store.creality.com/au/collections/ender-series-3d-printer"],
+["Bunnings Marketplace","Creality Ender-3 V3 SE","$279","https://www.bunnings.com.au/products/indoor-living/home-office/computers-tablets/printing/3d-printers"],
+["Bambu Lab AU store","Bambu Lab printers and filament","see store","https://au.store.bambulab.com/"],
+["Prusa Research","Prusa printers (ships to AU)","see store","https://www.prusa3d.com/"]]],
+["Print-on-demand 3D printing (send your STL)",[
+["Laser 3D Print (Sydney)","PLA/ABS printing, ships AU-wide","$0.05/g, $10 setup, $20 Express Post (estimate)","https://laser3dprint.com.au/"],
+["3D Printing Zone","PLA printing, instant quote","quote per file","https://3dprinting.zone/pla-3d-printing/"],
+["MakerMate","Print on demand, instant quote","quote per file","https://www.makermate.com.au/quote"],
+["Craftcloud","Compares print services, ships to AU","quote per file","https://craftcloud3d.com/"],
+["Shapeways","Industrial 3D printing","quote per file","https://www.shapeways.com/"]]],
+["Label printers",[
+["Officeworks","Brother P-touch PT-H110, pink (12 mm tape)","$34.00","https://www.officeworks.com.au/shop/officeworks/p/brother-p-touch-label-maker-pink-pt-h110-brpth110pk"],
+["Officeworks","Brother P-touch PT-D210 (12 mm tape)","$59.00","https://www.officeworks.com.au/shop/officeworks/p/brother-p-touch-label-maker-pt-d210-brptd210"],
+["Officeworks","Brother QL-800, 62 mm rolls, USB","$157.00","https://www.officeworks.com.au/shop/officeworks/p/brother-pro-label-printer-ql-800-brql800"],
+["Brother Australia","Brother QL-800 (official page)","$157.00","https://www.brother.com.au/en/labellers/all-labellers/ql-800"]]],
+["Fabric / iron-on label tape",[
+["Officeworks","Brother TZe-FA3 iron-on fabric tape 12 mm × 3 m","$29.00","https://www.officeworks.com.au/shop/officeworks/p/brother-tze-fa3-iron-on-fabric-tape-12mm-blue-on-white-brtzfabric"],
+["Mega Office Supplies","Brother TZe-FA3 iron-on fabric tape 12 mm × 3 m","$23.10","https://megaofficesupplies.com.au/products/brother-tze-fa3-12mm-blue-on-white-fabric-iron-tze-tape"],
+["Officeworks","DYMO LetraTag iron-on tape 12 mm","$17.00","https://www.officeworks.com.au/shop/officeworks/p/dymo-letratag-iron-on-tape-12mm-black-on-white-es18771"],
+["Ink Depot","DYMO LetraTag iron-on fabric tape 12 mm × 2 m","$13.22","https://www.inkdepot.com.au/products/dymo-18771-black-on-white-letratag-fabric-iron-on-label-tape-12mm-x-2m"]]],
+["Custom woven / printed clothing labels",[
+["Name It Labels","Personalised sew-on woven labels","50 for $59, 100 for $89","https://www.nameitlabels.com.au/sew-on-woven/"],
+["Wunderlabel AU","Woven logo labels / printed logo labels","woven 100 for $153; printed 25 for $28.95","https://wunderlabel.com.au/logo-labels/"],
+["ImprintNow","Custom woven labels 2.5–7.5 cm","100 × 2.5 cm at $1.34 each","https://www.imprintnow.com.au/product/patches/woven-labels"],
+["BizLabels","Custom woven labels, sew-on or iron-on","from $90","https://www.bizlabels.com.au/products/custom-woven-labels"]]]
+];
+const LABEL_TEXT="Karen Elizabeth";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(m){const t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display="none",2600);}
+
+// ---------- tabs ----------
+function showTab(t){document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));document.querySelectorAll("main section").forEach(s=>s.classList.toggle("show",s.id===t));
+ if(t==="view3d"){rebuild();} if(t==="print"){refreshPreview();} if(t==="queue")renderQueue(); window.scrollTo(0,0);}
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>showTab(b.dataset.t));
+
+// ---------- design model (mm, board 0..120) ----------
+const BOARD=120;
+let items=[]; // {type:'fill'|'line', pts:[[x,y]...], w}
+let tool="fill";
+const dc=$("draw"),dx=dc.getContext("2d");
+const PX=dc.width/BOARD;
+function val(id){return parseFloat($(id).value);}
+function drawBoard(){
+ dx.clearRect(0,0,dc.width,dc.height);dx.fillStyle="#fff";dx.fillRect(0,0,dc.width,dc.height);
+ dx.strokeStyle="#ffe0ef";dx.lineWidth=1;
+ for(let i=0;i<=BOARD;i+=10){dx.beginPath();dx.moveTo(i*PX,0);dx.lineTo(i*PX,dc.height);dx.stroke();dx.beginPath();dx.moveTo(0,i*PX);dx.lineTo(dc.width,i*PX);dx.stroke();}
+ const s=val("scale")/100;
+ dx.save();dx.translate(BOARD/2*PX,BOARD/2*PX);dx.scale(s,s);dx.translate(-BOARD/2*PX,-BOARD/2*PX);
+ for(const it of items){
+  if(it.pts.length<2)continue;
+  dx.beginPath();it.pts.forEach((p,i)=>i?dx.lineTo(p[0]*PX,p[1]*PX):dx.moveTo(p[0]*PX,p[1]*PX));
+  if(it.type==="fill"){dx.closePath();dx.fillStyle="#ff8cc6";dx.fill();dx.strokeStyle="#b0105f";dx.lineWidth=2/s;dx.stroke();}
+  else{dx.strokeStyle="#ff4fa3";dx.lineWidth=it.w*PX;dx.lineCap="round";dx.lineJoin="round";dx.stroke();}
+ }
+ dx.restore();
+ // tag preview
+ const tg=tagRect();
+ if(tg){dx.fillStyle="#ffd1e8";dx.strokeStyle="#b0105f";dx.lineWidth=2;dx.beginPath();dx.rect(tg.x*PX,tg.y*PX,tg.w*PX,tg.h*PX);dx.fill();dx.stroke();
+  dx.fillStyle="#b0105f";dx.font=`700 ${tg.h*0.55*PX}px Georgia,serif`;dx.textAlign="center";dx.textBaseline="middle";dx.fillText(LABEL_TEXT,(tg.x+tg.w/2)*PX,(tg.y+tg.h/2)*PX);}
+}
+function scaledItems(){const s=val("scale")/100,c=BOARD/2;return items.filter(it=>it.pts.length>=2).map(it=>({type:it.type,w:it.w*s,pts:it.pts.map(p=>[c+(p[0]-c)*s,c+(p[1]-c)*s])}));}
+function bbox(list){let a=[1e9,1e9,-1e9,-1e9];for(const it of list){const r=it.type==="line"?it.w/2:0;for(const p of it.pts){a[0]=Math.min(a[0],p[0]-r);a[1]=Math.min(a[1],p[1]-r);a[2]=Math.max(a[2],p[0]+r);a[3]=Math.max(a[3],p[1]+r);}}return a[0]>a[2]?null:a;}
+function tagRect(){const b=bbox(scaledItems());if(!b)return null;const w=Math.max(30,Math.min(46,(b[2]-b[0])*0.9)),h=w*0.2;return{x:(b[0]+b[2])/2-w/2,y:b[3]-1,w,h};}
+
+let cur=null;
+function ptFromEvent(e){const r=dc.getBoundingClientRect();const s=val("scale")/100,c=BOARD/2;let x=(e.clientX-r.left)/r.width*BOARD,y=(e.clientY-r.top)/r.height*BOARD;return[c+(x-c)/s,c+(y-c)/s];}
+dc.addEventListener("pointerdown",e=>{e.preventDefault();dc.setPointerCapture(e.pointerId);cur={type:tool,w:val("lineW"),pts:[ptFromEvent(e)]};items.push(cur);drawBoard();});
+dc.addEventListener("pointermove",e=>{if(!cur)return;const p=ptFromEvent(e),l=cur.pts[cur.pts.length-1];if(Math.hypot(p[0]-l[0],p[1]-l[1])>0.8){cur.pts.push(p);drawBoard();}});
+function endStroke(){if(!cur)return;if(cur.pts.length<3&&cur.type==="fill"){cur.type="line";}if(cur.pts.length<2){items.pop();}cur=null;drawBoard();dirty=true;}
+dc.addEventListener("pointerup",endStroke);dc.addEventListener("pointercancel",endStroke);
+function setTool(t){tool=t;$("toolFill").classList.toggle("on",t==="fill");$("toolLine").classList.toggle("on",t==="line");}
+$("toolFill").onclick=()=>setTool("fill");$("toolLine").onclick=()=>setTool("line");
+$("undo").onclick=()=>{items.pop();dirty=true;drawBoard();};
+$("clear").onclick=()=>{if(items.length&&!confirm("Clear the board?"))return;items=[];dirty=true;drawBoard();};
+for(const [id,u] of [["thick"," mm"],["lineW"," mm"],["scale","%"]]){$(id).oninput=()=>{$(id+"V").textContent=$(id).value+u;dirty=true;drawBoard();};}
+
+// ---------- templates ----------
+function circlePts(cx,cy,r,n=40,rx){rx=rx||r;const a=[];for(let i=0;i<n;i++){const t=i/n*Math.PI*2;a.push([cx+Math.cos(t)*rx,cy+Math.sin(t)*r]);}return a;}
+function heartPts(cx,cy,s){const a=[];for(let i=0;i<60;i++){const t=i/60*Math.PI*2;const x=16*Math.pow(Math.sin(t),3),y=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);a.push([cx+x*s,cy-y*s]);}return a;}
+function starPts(cx,cy,R,r,n=5){const a=[];for(let i=0;i<n*2;i++){const t=i/(n*2)*Math.PI*2-Math.PI/2,rr=i%2?r:R;a.push([cx+Math.cos(t)*rr,cy+Math.sin(t)*rr]);}return a;}
+function arcPts(cx,cy,r,a0,a1,n=24){const a=[];for(let i=0;i<=n;i++){const t=a0+(a1-a0)*i/n;a.push([cx+Math.cos(t)*r,cy+Math.sin(t)*r]);}return a;}
+const TPL={
+ bag:()=>[{type:"fill",pts:[[25,45],[95,45],[102,95],[18,95]]},{type:"line",w:4,pts:arcPts(60,45,22,Math.PI,2*Math.PI)},{type:"fill",pts:heartPts(60,70,0.6)}],
+ shoe:()=>[{type:"fill",pts:[[15,80],[20,62],[40,64],[62,48],[82,42],[100,46],[104,58],[88,62],[70,78],[68,92],[60,92],[58,82],[30,86],[18,88]]},{type:"line",w:3,pts:[[88,62],[94,92]]}],
+ earring:()=>[{type:"line",w:2,pts:circlePts(60,28,7,24).concat([circlePts(60,28,7,24)[0]])},{type:"line",w:2.5,pts:[[60,35],[60,48]]},{type:"fill",pts:heartPts(60,66,1.1)}],
+ charm:()=>[{type:"fill",pts:heartPts(60,58,2)},{type:"line",w:2.5,pts:circlePts(60,22,6,24).concat([circlePts(60,22,6,24)[0]])}],
+ pattern:()=>{const o=[];for(let i=0;i<3;i++)for(let j=0;j<3;j++)o.push({type:"fill",pts:starPts(30+i*30,25+j*28,11,5)});o.push({type:"line",w:2,pts:[[18,25],[102,25]]},{type:"line",w:2,pts:[[18,53],[102,53]]},{type:"line",w:2,pts:[[18,81],[102,81]]});return o;},
+ bow:()=>[{type:"fill",pts:[[60,55],[22,32],[18,78]]},{type:"fill",pts:[[60,55],[98,32],[102,78]]},{type:"fill",pts:circlePts(60,55,9,30)}]
+};
+document.querySelectorAll("#templates button").forEach(b=>b.onclick=()=>{items=TPL[b.dataset.tpl]();$("dname").value="Coffeebreak "+b.textContent.replace(/^\S+\s/,"");dirty=true;drawBoard();toast("Design loaded");});
+
+$("saveD").onclick=()=>{try{localStorage.setItem("cbf3d_design",JSON.stringify({items,name:$("dname").value,thick:$("thick").value,scale:$("scale").value}));toast("Saved on this device");}catch(e){toast("Could not save");}};
+$("loadD").onclick=()=>{try{const d=JSON.parse(localStorage.getItem("cbf3d_design")||"null");if(!d){toast("Nothing saved yet");return;}items=d.items;$("dname").value=d.name;$("thick").value=d.thick;$("scale").value=d.scale;["thick","scale"].forEach(i=>$(i).oninput());toast("Loaded");}catch(e){toast("Could not load");}};
+
+// ---------- geometry ----------
+function area(p){let a=0;for(let i=0;i<p.length;i++){const q=p[i],r=p[(i+1)%p.length];a+=q[0]*r[1]-r[0]*q[1];}return a/2;}
+function simplify(p,d){const o=[p[0]];for(const q of p){const l=o[o.length-1];if(Math.hypot(q[0]-l[0],q[1]-l[1])>=d)o.push(q);}if(o.length>2){const f=o[0],l=o[o.length-1];if(Math.hypot(f[0]-l[0],f[1]-l[1])<d)o.pop();}return o;}
+function segX(a,b,c,d){const o=(p,q,r)=>(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]);return o(a,b,c)*o(a,b,d)<0&&o(c,d,a)*o(c,d,b)<0;}
+function simplePoly(p){const n=p.length;for(let i=0;i<n;i++)for(let j=i+2;j<n;j++){if(i===0&&j===n-1)continue;if(segX(p[i],p[(i+1)%n],p[j],p[(j+1)%n]))return false;}return true;}
+function earclip(pts){const p=pts.slice();if(area(p)<0)p.reverse();const idx=p.map((_,i)=>i),tris=[];let guard=0;
+ const inside=(a,b,c,q)=>{const s=(p1,p2,p3)=>(p1[0]-p3[0])*(p2[1]-p3[1])-(p2[0]-p3[0])*(p1[1]-p3[1]);const d1=s(q,a,b),d2=s(q,b,c),d3=s(q,c,a);return !((d1<0||d2<0||d3<0)&&(d1>0||d2>0||d3>0));};
+ while(idx.length>3&&guard++<10000){let found=false;for(let i=0;i<idx.length;i++){const a=p[idx[(i+idx.length-1)%idx.length]],b=p[idx[i]],c=p[idx[(i+1)%idx.length]];
+  if((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])<=1e-9)continue;let ok=true;
+  for(const k of idx){const q=p[k];if(q===a||q===b||q===c)continue;if(inside(a,b,c,q)){ok=false;break;}}
+  if(ok){tris.push([a,b,c]);idx.splice(i,1);found=true;break;}}if(!found)return null;}
+ if(idx.length===3)tris.push([p[idx[0]],p[idx[1]],p[idx[2]]]);return{poly:p,tris};}
+// mesh in mm, coords: x right, y = up (flip board y), z up out of bed
+function Mesh(){this.t=[];}
+Mesh.prototype.tri=function(a,b,c){this.t.push([a,b,c]);};
+function extrude(m,poly,tris,z0,z1){ // poly ccw in xy (y up)
+ for(const [a,b,c] of tris){m.tri([a[0],a[1],z1],[b[0],b[1],z1],[c[0],c[1],z1]);m.tri([a[0],a[1],z0],[c[0],c[1],z0],[b[0],b[1],z0]);}
+ for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length];m.tri([a[0],a[1],z0],[b[0],b[1],z0],[b[0],b[1],z1]);m.tri([a[0],a[1],z0],[b[0],b[1],z1],[a[0],a[1],z1]);}}
+function box(m,x0,y0,x1,y1,z0,z1){const q=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]];extrude(m,q,[[q[0],q[1],q[2]],[q[0],q[2],q[3]]],z0,z1);}
+function quadSeg(m,a,b,w,z0,z1){const dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1,nx=-dy/L*w/2,ny=dx/L*w/2,ex=dx/L*w*0.25,ey=dy/L*w*0.25;
+ const q=[[a[0]-ex+nx,a[1]-ey+ny],[a[0]-ex-nx,a[1]-ey-ny],[b[0]+ex-nx,b[1]+ey-ny],[b[0]+ex+nx,b[1]+ey+ny]];if(area(q)<0)q.reverse();extrude(m,q,[[q[0],q[1],q[2]],[q[0],q[2],q[3]]],z0,z1);}
+let textCache={};
+function textRuns(w,h){const key=w.toFixed(2)+"x"+h.toFixed(2);if(textCache[key])return textCache[key];const res=0.3,W=Math.round(w/res),H=Math.round(h/res);
+ const c=document.createElement("canvas");c.width=W;c.height=H;const g=c.getContext("2d");g.fillStyle="#000";g.font=`700 ${H*0.8}px Georgia,serif`;g.textAlign="center";g.textBaseline="middle";
+ let fs=H*0.8;while(g.measureText(LABEL_TEXT).width>W*0.94&&fs>4){fs-=1;g.font=`700 ${fs}px Georgia,serif`;}g.fillText(LABEL_TEXT,W/2,H/2);
+ const d=g.getImageData(0,0,W,H).data,runs=[];for(let y=0;y<H;y++){let s=-1;for(let x=0;x<=W;x++){const on=x<W&&d[(y*W+x)*4+3]>110;if(on&&s<0)s=x;if(!on&&s>=0){runs.push([s*res,y*res,x*res,(y+1)*res]);s=-1;}}}
+ return textCache[key]={runs};}
+let dirty=true,mesh=null,meshInfo={};
+function inPoly(poly,x,y){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;}
+function buildMesh(){
+ const list=scaledItems(),m=new Mesh(),T=val("thick");let fails=0;const placed=[];
+ const F=p=>[p[0],BOARD-p[1]];
+ for(const it of list){
+  if(it.type==="fill"){let p=simplify(it.pts,0.8).map(F);let ok=false;
+   const cx=p.reduce((t,q)=>t+q[0],0)/p.length,cy=p.reduce((t,q)=>t+q[1],0)/p.length;
+   const onTop=placed.some(pp=>inPoly(pp,cx,cy));const Z=onTop?T+0.8:T;
+   if(p.length>=3&&Math.abs(area(p))>1&&simplePoly(p)){const r=earclip(p);if(r){extrude(m,r.poly,r.tris,0,Z);placed.push(r.poly);ok=true;}}
+   if(!ok){fails++;const pp=p.concat([p[0]]);for(let i=0;i<pp.length-1;i++)quadSeg(m,pp[i],pp[i+1],Math.max(1.5,val("lineW")),0,T);}
+  }else{const p=simplify(it.pts,0.6).map(F);for(let i=0;i<p.length-1;i++)quadSeg(m,p[i],p[i+1],it.w,0,T);}
+ }
+ const tg=tagRect();
+ if(tg){const plate=Math.max(1.2,Math.min(T,2));const x0=tg.x,y1=BOARD-tg.y,y0=BOARD-(tg.y+tg.h);box(m,x0,y0,x0+tg.w,y1,0,plate);
+  const tr=textRuns(tg.w,tg.h);for(const r of tr.runs)box(m,x0+r[0],y1-r[3],x0+r[2],y1-r[1],plate,plate+0.6);}
+ let b=[1e9,1e9,1e9,-1e9,-1e9,-1e9];for(const t of m.t)for(const v of t)for(let k=0;k<3;k++){b[k]=Math.min(b[k],v[k]);b[k+3]=Math.max(b[k+3],v[k]);}
+ meshInfo={tris:m.t.length,size:m.t.length?[b[3]-b[0],b[4]-b[1],b[5]-b[2]]:[0,0,0],center:[(b[0]+b[3])/2,(b[1]+b[4])/2,(b[2]+b[5])/2],fails};
+ mesh=m;dirty=false;return m;}
+function rebuild(){if(dirty||!mesh)buildMesh();$("dims").textContent=meshInfo.tris?`${meshInfo.size[0].toFixed(0)} × ${meshInfo.size[1].toFixed(0)} × ${meshInfo.size[2].toFixed(1)} mm · ${meshInfo.tris} triangles`:"Draw something first";render3d();}
+function stlBlob(){if(dirty||!mesh)buildMesh();const n=mesh.t.length,buf=new ArrayBuffer(84+n*50),dv=new DataView(buf);
+ const hdr="Coffeebreak Fashion 3D - Karen Elizabeth label";for(let i=0;i<80;i++)dv.setUint8(i,i<hdr.length?hdr.charCodeAt(i):32);dv.setUint32(80,n,true);
+ const c=meshInfo.center;let o=84;
+ for(const [a,b,d] of mesh.t){const u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],v=[d[0]-a[0],d[1]-a[1],d[2]-a[2]];let nx=u[1]*v[2]-u[2]*v[1],ny=u[2]*v[0]-u[0]*v[2],nz=u[0]*v[1]-u[1]*v[0];const L=Math.hypot(nx,ny,nz)||1;
+  dv.setFloat32(o,nx/L,true);dv.setFloat32(o+4,ny/L,true);dv.setFloat32(o+8,nz/L,true);o+=12;
+  for(const p of [a,b,d]){dv.setFloat32(o,p[0]-c[0],true);dv.setFloat32(o+4,p[1]-c[1],true);dv.setFloat32(o+8,p[2],true);o+=12;}dv.setUint16(o,0,true);o+=2;}
+ return new Blob([buf],{type:"model/stl"});}
+
+// ---------- 3D view ----------
+const vc=$("view"),vx=vc.getContext("2d");let yaw=-0.6,pitch=0.9,spin=true,drag=null;
+function render3d(){
+ vx.clearRect(0,0,vc.width,vc.height);if(!mesh||!mesh.t.length){vx.fillStyle="#b0105f";vx.font="700 28px system-ui";vx.textAlign="center";vx.fillText("Draw a design first",vc.width/2,vc.height/2);return;}
+ const c=meshInfo.center,sz=Math.max(meshInfo.size[0],meshInfo.size[1],20),S=Math.min(vc.width,vc.height)*0.75/sz;
+ const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch),L=[0.3,0.5,0.8],ll=Math.hypot(...L);
+ const proj=v=>{let x=v[0]-c[0],y=v[1]-c[1],z=v[2]-c[2];let x1=x*cy-y*sy,y1=x*sy+y*cy;let y2=y1*cp-z*sp,z2=y1*sp+z*cp;return[vc.width/2+x1*S,vc.height/2-z2*S+0,y2];};
+ const out=[];
+ for(const t of mesh.t){const a=proj(t[0]),b=proj(t[1]),d=proj(t[2]);const cr=(b[0]-a[0])*(d[1]-a[1])-(b[1]-a[1])*(d[0]-a[0]);if(cr>0)continue;
+  const u=[t[1][0]-t[0][0],t[1][1]-t[0][1],t[1][2]-t[0][2]],w=[t[2][0]-t[0][0],t[2][1]-t[0][1],t[2][2]-t[0][2]];const n=[u[1]*w[2]-u[2]*w[1],u[2]*w[0]-u[0]*w[2],u[0]*w[1]-u[1]*w[0]];const nl=Math.hypot(...n)||1;
+  const br=Math.max(0,(n[0]*L[0]+n[1]*L[1]+n[2]*L[2])/nl/ll);const high=Math.min(t[0][2],t[1][2],t[2][2])>val("thick")-0.01&&meshInfo.size[2]>val("thick")-0.01&&false;
+  out.push([(a[2]+b[2]+d[2])/3,a,b,d,br,t]);}
+ // z-buffer raster so overlapping parts (heart on bag, label letters) draw correctly
+ const W=vc.width,H=vc.height,img=vx.createImageData(W,H),px=img.data,zb=new Float32Array(W*H).fill(Infinity);
+ for(const [,a,b,d,br] of out){const k=0.45+0.55*br,R=Math.round(255*k),G=Math.round(90*k+40),B=Math.round(170*k+20);
+  const x0=Math.max(0,Math.floor(Math.min(a[0],b[0],d[0]))),x1=Math.min(W-1,Math.ceil(Math.max(a[0],b[0],d[0]))),y0=Math.max(0,Math.floor(Math.min(a[1],b[1],d[1]))),y1=Math.min(H-1,Math.ceil(Math.max(a[1],b[1],d[1])));
+  const den=(b[1]-d[1])*(a[0]-d[0])+(d[0]-b[0])*(a[1]-d[1]);if(Math.abs(den)<1e-9)continue;
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const X=x+0.5,Y=y+0.5,l1=((b[1]-d[1])*(X-d[0])+(d[0]-b[0])*(Y-d[1]))/den,l2=((d[1]-a[1])*(X-d[0])+(a[0]-d[0])*(Y-d[1]))/den,l3=1-l1-l2;
+   if(l1<-1e-4||l2<-1e-4||l3<-1e-4)continue;const z=l1*a[2]+l2*b[2]+l3*d[2],i=y*W+x;if(z<zb[i]-1e-4){zb[i]=z;const o=i*4;px[o]=R;px[o+1]=G;px[o+2]=B;px[o+3]=255;}}}
+ vx.putImageData(img,0,0);
+}
+// view: pitch rotates around x; y axis of model maps toward viewer depth
+vc.addEventListener("pointerdown",e=>{drag=[e.clientX,e.clientY];vc.setPointerCapture(e.pointerId);spin=false;$("spin").classList.remove("on");});
+vc.addEventListener("pointermove",e=>{if(!drag)return;yaw+=(e.clientX-drag[0])*0.01;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-drag[1])*0.01));drag=[e.clientX,e.clientY];render3d();});
+vc.addEventListener("pointerup",()=>drag=null);
+$("spin").onclick=()=>{spin=!spin;$("spin").classList.toggle("on",spin);};
+$("resetView").onclick=()=>{yaw=-0.6;pitch=0.9;render3d();};
+let lastT=0;function loop(t){if(spin&&$("view3d").classList.contains("show")&&t-lastT>50){yaw+=0.02;render3d();lastT=t;}requestAnimationFrame(loop);}requestAnimationFrame(loop);
+$("go3d").onclick=()=>showTab("view3d");$("goPrint").onclick=()=>showTab("print");$("go3dPrint").onclick=()=>{setPType("3d");showTab("print");};
+$("dlStl").onclick=()=>{if(!hasDesign())return;download(stlBlob(),fileBase()+".stl");};
+
+// ---------- files ----------
+function hasDesign(){if(!scaledItems().length){toast("Draw or pick a design first");return false;}return true;}
+function fileBase(){return ($("dname").value||"design").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase()||"design";}
+function download(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);window.__lastDownloads=(window.__lastDownloads||[]).concat([name]);}
+function dataURLtoBytes(u){const b=atob(u.split(",")[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
+// minimal PDF: one JPEG image per page, sizes in mm
+function makePdf(pages){const mm=72/25.4,enc=new TextEncoder(),chunks=[],offs=[];let len=0;const push=x=>{const b=typeof x==="string"?enc.encode(x):x;chunks.push(b);len+=b.length;};
+ const n=pages.length,objs=[];push("%PDF-1.4\n");
+ const kids=[];for(let i=0;i<n;i++)kids.push((3+i*3)+" 0 R");
+ const obj=(id,body,stream)=>{offs[id]=len;push(id+" 0 obj\n"+body);if(stream){push("\nstream\n");push(stream);push("\nendstream");}push("\nendobj\n");};
+ obj(1,"<< /Type /Catalog /Pages 2 0 R >>");obj(2,`<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${n} >>`);
+ pages.forEach((p,i)=>{const pid=3+i*3,cid=pid+1,iid=pid+2,img=dataURLtoBytes(p.jpeg);const W=p.w*mm,H=p.h*mm,iw=p.iw*mm,ih=p.ih*mm,x=p.x*mm,y=H-(p.y*mm)-ih;
+  obj(pid,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W.toFixed(2)} ${H.toFixed(2)}] /Resources << /XObject << /Im${i} ${iid} 0 R >> >> /Contents ${cid} 0 R >>`);
+  const cs=`q ${iw.toFixed(3)} 0 0 ${ih.toFixed(3)} ${x.toFixed(3)} ${y.toFixed(3)} cm /Im${i} Do Q`;obj(cid,`<< /Length ${cs.length} >>`,cs);
+  obj(iid,`<< /Type /XObject /Subtype /Image /Width ${p.pw} /Height ${p.ph} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.length} >>`,img);});
+ const total=3+n*3,xo=len;let x="xref\n0 "+total+"\n0000000000 65535 f \n";for(let i=1;i<total;i++)x+=String(offs[i]).padStart(10,"0")+" 00000 n \n";
+ push(x+`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xo}\n%%EOF`);return new Blob(chunks,{type:"application/pdf"});}
+const DPI=300,PXMM=DPI/25.4;
+function canvasMM(wmm,hmm){const c=document.createElement("canvas");c.width=Math.round(wmm*PXMM);c.height=Math.round(hmm*PXMM);const g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height);g.scale(PXMM,PXMM);return[c,g];}
+function fitText(g,txt,maxW,size,weight,font){let s=size;g.font=`${weight} ${s}px ${font}`;while(g.measureText(txt).width>maxW&&s>1){s*=0.95;g.font=`${weight} ${s}px ${font}`;}return s;}
+// stencil 1:1 on A4 (190 x 277 mm printable)
+function stencilCanvas(){const W=190,H=277,[c,g]=canvasMM(W,H);const list=scaledItems(),b=bbox(list),tg=tagRect();if(!b)return c;
+ const bx=Math.min(b[0],tg.x),by=Math.min(b[1],tg.y),bw=Math.max(b[2],tg.x+tg.w)-bx,bh=Math.max(b[3],tg.y+tg.h)-by;const ox=(W-bw)/2-bx,oy=Math.max(30,(H-bh)/2)-by;
+ g.fillStyle="#b0105f";g.textAlign="left";g.textBaseline="top";fitText(g,"Coffeebreak Fashion 3D · 3D pen stencil · print at 100% (actual size)",W,7,"700","Arial");g.fillText("Coffeebreak Fashion 3D · 3D pen stencil · print at 100% (actual size)",0,0);
+ g.font="600 5px Arial";g.fillText(($("dname").value||"Design")+" · "+bw.toFixed(0)+" × "+bh.toFixed(0)+" mm",0,9);
+ g.strokeStyle="#000";g.lineWidth=0.5;g.beginPath();g.moveTo(0,20);g.lineTo(50,20);for(let i=0;i<=50;i+=10){g.moveTo(i,17);g.lineTo(i,23);}g.stroke();g.font="4px Arial";g.fillStyle="#000";g.fillText("50 mm check ruler",54,17.5);
+ g.save();g.translate(ox,oy);g.lineJoin="round";g.lineCap="round";
+ for(const it of list){g.beginPath();it.pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));
+  if(it.type==="fill"){g.closePath();g.fillStyle="#ffe3f1";g.fill();g.strokeStyle="#000";g.lineWidth=0.6;g.stroke();}
+  else{g.strokeStyle="#ff8cc6";g.lineWidth=it.w;g.stroke();g.strokeStyle="#000";g.lineWidth=0.3;g.setLineDash([1.5,1]);g.stroke();g.setLineDash([]);}}
+ g.fillStyle="#fff";g.strokeStyle="#000";g.lineWidth=0.6;g.beginPath();g.rect(tg.x,tg.y,tg.w,tg.h);g.fill();g.stroke();
+ g.fillStyle="#000";g.textAlign="center";g.textBaseline="middle";fitText(g,LABEL_TEXT,tg.w*0.92,tg.h*0.55,"700","Georgia,serif");g.fillText(LABEL_TEXT,tg.x+tg.w/2,tg.y+tg.h/2);g.restore();
+ g.fillStyle="#7a3a5c";g.textAlign="left";g.textBaseline="bottom";g.font="3.6px Arial";
+ g.fillText("Trace on baking paper over this sheet. Hot tools: adults supervise children.",0,H-6);
+ g.fillText("© Karen Elizabeth O'Brien (Coffeebreak). Personal use. Do not copy or resell this design file.",0,H-1);return c;}
+const LABELS={"12":{w:60,h:12},"24":{w:70,h:24},"62":{w:62,h:29}};
+function labelCanvas(size){const L=LABELS[size],[c,g]=canvasMM(L.w,L.h);g.textAlign="center";g.textBaseline="middle";g.fillStyle="#000";
+ g.strokeStyle="#000";g.lineWidth=0.35;const m=Math.max(1,L.h*0.08);g.strokeRect(m,m,L.w-2*m,L.h-2*m);
+ if(size==="12"){fitText(g,LABEL_TEXT,L.w-8,7,"700","Georgia,serif");g.fillText(LABEL_TEXT,L.w/2,L.h/2+0.3);}
+ else{fitText(g,LABEL_TEXT,L.w-10,L.h*0.42,"700","Georgia,serif");g.fillText(LABEL_TEXT,L.w/2,L.h*0.42);
+  const sub=size==="62"?($("dname").value||"Coffeebreak design"):"Coffeebreak";fitText(g,sub,L.w-10,L.h*0.16,"600","Arial");g.fillText(sub,L.w/2,L.h*0.74);}
+ return c;}
+// sew-in label: 50 x 30 mm, 5 mm fold/stitch allowance each end (finished face about 40 x 30 mm)
+function sewInCanvas(){const W=50,H=30,[c,g]=canvasMM(W,H);g.fillStyle="#ffe3f1";g.fillRect(0,0,W,H);
+ g.strokeStyle="#c2185b";g.lineWidth=0.3;g.setLineDash([1.2,0.8]);g.beginPath();g.moveTo(5,0);g.lineTo(5,H);g.moveTo(W-5,0);g.lineTo(W-5,H);g.stroke();g.setLineDash([]);
+ g.fillStyle="#000";g.textAlign="center";g.textBaseline="middle";fitText(g,LABEL_TEXT,W-14,9,"700","Georgia,serif");g.fillText(LABEL_TEXT,W/2,H*0.42);
+ fitText(g,"Coffeebreak",W-16,3.6,"600","Arial");g.fillText("Coffeebreak",W/2,H*0.68);
+ g.fillStyle="#7a3a5c";fitText(g,"fold + stitch on dashed lines",W-14,2.2,"400","Arial");g.fillText("fold + stitch on dashed lines",W/2,H-2.5);return c;}
+function saveSewIn(){sewInCanvas().toBlob(b=>download(b,"karen-elizabeth-sew-in-label-50x30mm.png"),"image/png");}
+function presetText(brand,mat){const P={bambu:["Bambu Studio","Bambu Lab A1 / A1 mini / P1S / X1","0.20mm Standard"],creality:["Creality Print","Creality Ender-3 V3 / K1 / K2","0.20mm Standard"],prusa:["PrusaSlicer","Prusa MK4 / MINI / CORE One","0.20mm QUALITY"],other:["your slicer (Cura, OrcaSlicer...)","any FDM printer","0.20 mm"]}[brand];
+ const M={PLA:{n:"210-220 °C",b:"55-60 °C",f:"100%"},PETG:{n:"230-245 °C",b:"70-80 °C",f:"40-60%"},TPU:{n:"220-230 °C",b:"40-50 °C",f:"100%, print slowly"}}[mat];
+ return `Coffeebreak Fashion 3D - print settings card
+Design: ${$("dname").value}
+Size: ${meshInfo.size.map(v=>v.toFixed(1)).join(" x ")} mm  (STL units: millimetres)
+Label: "${LABEL_TEXT}" tag is part of the model (raised 0.6 mm)
+
+Open the STL in: ${P[0]}  (for ${P[1]})
+Printer profile: pick your printer, then the ${P[2]} process/profile
+Material: ${mat}  nozzle ${M.n}, bed ${M.b}, cooling fan ${M.f}
+Layer height: 0.20 mm   Walls: 3   Top/bottom layers: 4
+Infill: 20% (gyroid or grid)   Supports: off   Brim: on for small pieces
+Placement: flat on the bed, label side facing up
+Colour tip: pause at layer ${Math.max(2,Math.round((Math.max(1.2,Math.min(val("thick"),2)))/0.2))} to swap colour so the Karen Elizabeth letters stand out
+
+Then press Slice and Print in that app. This app prepares files only; it does not control USB printers directly.
+© Karen Elizabeth O'Brien (Coffeebreak). Personal use. Do not copy or resell this file.`;}
+
+// ---------- print flow ----------
+let ptype="3d",brand="bambu",lsize="12";
+function setPType(p){ptype=p;document.querySelectorAll("#ptype button").forEach(b=>b.classList.toggle("on",b.dataset.p===p));$("opt3d").style.display=p==="3d"?"":"none";$("optLabel").style.display=p==="label"?"":"none";$("optPaper").style.display=p==="paper"?"":"none";refreshPreview();}
+document.querySelectorAll("#ptype button").forEach(b=>b.onclick=()=>setPType(b.dataset.p));
+document.querySelectorAll("#brand button").forEach(b=>b.onclick=()=>{brand=b.dataset.b;document.querySelectorAll("#brand button").forEach(x=>x.classList.toggle("on",x===b));refreshPreview();});
+document.querySelectorAll("#lsize button").forEach(b=>b.onclick=()=>{lsize=b.dataset.l;document.querySelectorAll("#lsize button").forEach(x=>x.classList.toggle("on",x===b));refreshPreview();});
+$("mat").onchange=refreshPreview;
+function snapshot3d(){if(dirty||!mesh)buildMesh();render3d();return vc.toDataURL("image/png");}
+function currentJob(){const j={id:Date.now()+Math.random(),type:ptype,name:$("dname").value||"Design",brand,mat:$("mat").value,lsize,copies:Math.max(1,Math.min(50,parseInt($("lcopies").value)||1)),status:"waiting",
+  design:JSON.stringify({items,thick:$("thick").value,scale:$("scale").value,lineW:$("lineW").value})};
+ j.thumb=ptype==="3d"?snapshot3d():ptype==="label"?labelCanvas(lsize).toDataURL("image/png"):stencilCanvas().toDataURL("image/jpeg",0.6);
+ j.title=ptype==="3d"?`3D print · ${({bambu:"Bambu Lab",creality:"Creality",prusa:"Prusa",other:"Other"})[brand]} · ${j.mat}`:ptype==="label"?`Label ${lsize} mm × ${j.copies}`:"Paper stencil A4";return j;}
+function refreshPreview(){if(!scaledItems().length){$("preview").removeAttribute("src");$("preview").alt="Draw or pick a design first";return;}
+ if(ptype==="3d")$("preview").src=snapshot3d();else if(ptype==="label")$("preview").src=labelCanvas(lsize).toDataURL("image/png");else $("preview").src=stencilCanvas().toDataURL("image/jpeg",0.7);}
+function withDesign(j,fn){const keep=JSON.stringify({items,thick:$("thick").value,scale:$("scale").value,lineW:$("lineW").value,name:$("dname").value});
+ const d=JSON.parse(j.design);items=d.items;$("thick").value=d.thick;$("scale").value=d.scale;$("lineW").value=d.lineW;$("dname").value=j.name;dirty=true;
+ try{return fn();}finally{const k=JSON.parse(keep);items=k.items;$("thick").value=k.thick;$("scale").value=k.scale;$("lineW").value=k.lineW;$("dname").value=k.name;dirty=true;drawBoard();}}
+function canvasPage(c,wmm,hmm){return{w:wmm,h:hmm,iw:wmm,ih:hmm,x:0,y:0,pw:c.width,ph:c.height,jpeg:c.toDataURL("image/jpeg",0.95)};}
+function runJob(j){return withDesign(j,()=>{const base=fileBase();let msg="";saveSewIn();
+ if(j.type==="3d"){buildMesh();download(stlBlob(),base+".stl");download(new Blob([presetText(j.brand,j.mat)],{type:"text/plain"}),base+"-"+j.brand+"-settings.txt");
+  const app={bambu:"Bambu Studio",creality:"Creality Print",prusa:"PrusaSlicer",other:"your slicer"}[j.brand];
+  msg=`<p>Saved <b>${esc(base)}.stl</b> and a settings card.</p><ol><li>Open <b>${app}</b>.</li><li>Drag the STL file in.</li><li>Choose ${esc(j.mat)} and the 0.20 mm profile.</li><li>Press Slice, then Print.</li></ol>`;}
+ else if(j.type==="label"){const L=LABELS[j.lsize],c=labelCanvas(j.lsize);c.toBlob(b=>download(b,`karen-elizabeth-label-${j.lsize}mm.png`),"image/png");
+  const pages=[];for(let i=0;i<j.copies;i++)pages.push(canvasPage(c,L.w,L.h));download(makePdf(pages),`karen-elizabeth-label-${j.lsize}mm-x${j.copies}.pdf`);
+  msg=`<p>Saved the Karen Elizabeth label at <b>${L.w} × ${L.h} mm</b> (PNG, 300 dpi) and a PDF with ${j.copies} label${j.copies>1?"s":""}.</p><ol><li>Open Brother P-touch Editor, iPrint&amp;Label or DYMO software.</li><li>Choose ${j.lsize} mm ${j.lsize==="62"?"roll":"tape"}${j.lsize==="12"?" (iron-on fabric tape works for clothes)":""}.</li><li>Insert the PNG, or print the PDF to the label printer at 100%.</li></ol>`;}
+ else{const c=stencilCanvas(),L=LABELS["24"],lc=labelCanvas("24");download(makePdf([canvasPage(c,190,277),Object.assign(canvasPage(lc,L.w,L.h),{w:210,h:297,x:20,y:20})].map((p,i)=>i===0?Object.assign(p,{w:210,h:297,x:10,y:10}):p)),base+"-stencil-A4.pdf");
+  const pa=$("printArea");pa.innerHTML="";const im=new Image();im.src=c.toDataURL("image/png");im.style.width="190mm";im.style.height="277mm";pa.appendChild(im);
+  const im2=new Image();im2.src=lc.toDataURL("image/png");im2.style.width=L.w+"mm";im2.style.height=L.h+"mm";pa.appendChild(im2);
+  setTimeout(()=>{try{window.print();}catch(e){}},300);
+  msg=`<p>Your browser's print box is opening. Choose your paper printer, set scale to <b>100% / actual size</b>, then Print.</p><p>A PDF copy (${esc(base)}-stencil-A4.pdf) was also saved.</p>`;}
+ msg+=`<p>🏷️ Also saved <b>karen-elizabeth-sew-in-label-50x30mm.png</b> (300 dpi). Print it at 100% onto printable fabric or iron-on transfer sheets, cut it out, fold on the dashed lines and sew it in.</p>`;
+ j.status="done";saveQueue();renderQueue();return msg;});}
+function showDone(title,body){$("mTitle").textContent=title;$("mBody").innerHTML=body+`<p class="note">This app prepares the files. Your printer's own app or the browser print box sends them to the printer. It does not control USB printers directly.</p>`;$("doneModal").classList.add("show");}
+$("mClose").onclick=()=>$("doneModal").classList.remove("show");
+function printNow(){if(!hasDesign())return;const j=currentJob();queue.push(j);const m=runJob(j);showDone("✅ Ready to print",m);}
+$("doPrint").onclick=printNow;$("bigPrint").onclick=printNow;
+$("addQ").onclick=()=>{if(!hasDesign())return;queue.push(currentJob());saveQueue();renderQueue();toast("Added to queue");};
+
+// ---------- queue ----------
+let queue=[];try{queue=JSON.parse(localStorage.getItem("cbf3d_queue")||"[]");}catch(e){queue=[];}
+function saveQueue(){try{localStorage.setItem("cbf3d_queue",JSON.stringify(queue.slice(-30)));}catch(e){}}
+function renderQueue(){const w=queue.filter(j=>j.status!=="done").length;$("qcount").textContent=w?`(${w})`:"";const el=$("qlist");if(!queue.length){el.innerHTML='<p class="note">No print jobs yet. Use Print, then Add to queue.</p>';return;}
+ el.innerHTML=queue.map((j,i)=>`<div class="q"><img src="${j.thumb}" alt=""><div class="grow"><b>${esc(j.name)}</b><br>${esc(j.title)} <span class="tag ${j.status==="done"?"done":""}">${j.status==="done"?"done":"waiting"}</span><br><small>Label: ${LABEL_TEXT}</small></div><button data-run="${i}">▶️ Print</button><button data-del="${i}" title="Remove">✖</button></div>`).join("");
+ el.querySelectorAll("[data-run]").forEach(b=>b.onclick=()=>{const m=runJob(queue[+b.dataset.run]);showDone("✅ Ready to print",m);});
+ el.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{queue.splice(+b.dataset.del,1);saveQueue();renderQueue();});}
+$("runAll").onclick=()=>{const w=queue.filter(j=>j.status!=="done");if(!w.length){toast("Nothing waiting");return;}let html="";w.forEach(j=>{html+=`<h3>${esc(j.name)} · ${esc(j.title)}</h3>`+runJob(j);});showDone(`✅ ${w.length} job${w.length>1?"s":""} ready`,html);};
+$("clearDone").onclick=()=>{queue=queue.filter(j=>j.status!=="done");saveQueue();renderQueue();};
+
+// ---------- suppliers ----------
+$("suppTables").innerHTML=SUPPLIERS.map(([h,rows])=>`<h4>${esc(h)}</h4><div style="overflow-x:auto"><table><tr><th>Shop</th><th>Item</th><th>Price seen</th></tr>${rows.map(r=>`<tr><td><a href="${esc(r[3])}" target="_blank" rel="noopener">${esc(r[0])}</a></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}</table></div>`).join("");
+
+items=TPL.bag();$("dname").value="Coffeebreak Bag";drawBoard();renderQueue();
+</script>
+</body>
+</html>
